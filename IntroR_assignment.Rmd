@@ -1,0 +1,22 @@
+```{r}
+#create vector z, 1-200 num
+z = c(1:200)
+#mean, sd, and true/false scores above 30
+mean(z)
+sd(z)
+zlog = z > 30
+#create dataframe between z and zlog
+zdf = data.frame(z,zlog)
+colnames(zdf) = c("zvec","zlogic")
+#create new column for squared zvec
+zdf$zsquared = zdf$zvec^2
+#subset the data to only include values of zsquared greater than 10 and less than 100 
+zdf_subset1 <- subset(zdf, zsquared > 10 & zsquared < 100)
+zdf_subset2 <- zdf[zdf$zsquared > 10 & zdf$zsquared < 100, ]
+#Subset the zdf dataframe to only include the values on row 26
+zdf_row26 <- zdf[26, ]
+#Subset the zdf dataframe to only include the values in the column zsquared in the 180th row.
+zsquared_row180 <- zdf[180, "zsquared"]
+
+```
+
