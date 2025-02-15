@@ -1,0 +1,66 @@
+
+
+```{r}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+
+
+
+# Define colorblind palette
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", 
+                "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# Boxplot
+boxplot <- ggplot(MycotoxinData, aes(x = Treatment, y = DON, fill = Cultivar)) +
+  geom_boxplot() +
+  labs(y = "DON (ppm)", x = "") +
+  scale_fill_manual(values = cbbPalette)
+print(boxplot)
+
+# Bar chart with error bars
+bar_chart <- ggplot(MycotoxinData, aes(x = Treatment, y = DON, fill = Cultivar)) +
+  stat_summary(fun = mean, geom = "bar", position = position_dodge()) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", 
+               position = position_dodge(0.9), width = 0.2) +
+  labs(y = "DON (ppm)", x = "") +
+  scale_fill_manual(values = cbbPalette)
+print(bar_chart)
+
+# jittered points to boxplot/bar chart
+boxplot_with_points <- boxplot +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    shape = 21,
+    color = "black",
+    alpha = 0.7  
+  )
+print(boxplot_with_points)
+
+# For bar chart:
+bar_with_points <- bar_chart +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    shape = 21,
+    color = "black",
+    alpha = 0.7  
+  )
+print(bar_with_points)
+
+#Add facets to plots
+boxplot_faceted <- boxplot_with_points + facet_wrap(~Cultivar)
+bar_faceted <- bar_with_points + facet_wrap(~Cultivar)
+print(boxplot_faceted)
+print(bar_faceted)
+
+# Alternative plot (violin plot)
+violin_plot <- ggplot(MycotoxinData, aes(x = Treatment, y = DON, fill = Cultivar)) +
+  geom_violin(trim = FALSE) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.1), alpha = 0.7) +
+  facet_wrap(~Cultivar) +
+  scale_fill_manual(values = cbbPalette) +
+  labs(y = "DON (ppm)", x = "")
+print(violin_plot)
+```
+
