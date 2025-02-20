@@ -1,0 +1,125 @@
+install.packages("ggpubr")
+
+
+
+
+```{r}
+# Load necessary libraries (only once at top)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(rstatix)
+
+# Load the dataset with proper NA handling
+df <- read.csv("MycotoxinData.csv", na.strings = c("na", "nd", ""))  # Added empty string as NA
+
+# Convert and clean data once
+df <- df %>%
+  mutate(
+    Treatment = factor(Treatment, levels = c("NTC", "Fg", "Fg + 37", "Fg + 40", "Fg + 70")),
+    Cultivar = factor(Cultivar)
+  ) %>%
+  drop_na(DON, X15ADON, MassperSeed_mg)  # Remove NAs once
+
+# Define consistent visual parameters
+cbbPalette <- c("#56B4E9", "#E69F00")
+jitter_width <- 0.2
+point_alpha <- 0.6
+
+# Function to perform pairwise tests within cultivars
+perform_pairwise <- function(data, var) {
+  data %>%
+    group_by(Cultivar) %>%
+    pairwise_t_test(
+      reformulate("Treatment", response = var),
+      p.adjust.method = "bonferroni"
+    ) %>%
+    add_xy_position(x = "Treatment", group = "Cultivar")
+}
+
+# DON Plot ----------------------------------------------------------------
+don_stats <- perform_pairwise(df, "DON")
+
+p1 <- ggplot(df, aes(x = Treatment, y = DON, fill = Cultivar)) +
+  geom_boxplot(alpha = 0.2, width = 0.7, outlier.shape = NA) +
+  geom_jitter(
+    aes(color = Cultivar),
+    width = jitter_width,
+    height = 0,
+    alpha = point_alpha,
+    size = 2
+  ) +
+  scale_fill_manual(values = cbbPalette) +
+  scale_color_manual(values = cbbPalette) +
+  labs(y = "DON (ppm)", x = "") +
+  theme_classic() +
+  facet_wrap(~Cultivar) +
+  stat_pvalue_manual(
+    don_stats,
+    label = "p.adj.signif",
+    tip.length = 0.01,
+    hide.ns = TRUE
+  )
+
+# 15ADON Plot -------------------------------------------------------------
+x15adon_stats <- perform_pairwise(df, "X15ADON")
+
+p2 <- ggplot(df, aes(x = Treatment, y = X15ADON, fill = Cultivar)) +
+  geom_boxplot(alpha = 0.2, width = 0.7, outlier.shape = NA) +
+  geom_jitter(
+    aes(color = Cultivar),
+    width = jitter_width,
+    height = 0,
+    alpha = point_alpha,
+    size = 2
+  ) +
+  scale_fill_manual(values = cbbPalette) +
+  scale_color_manual(values = cbbPalette) +
+  labs(y = "15ADON", x = "") +
+  theme_classic() +
+  facet_wrap(~Cultivar) +
+  stat_pvalue_manual(
+    x15adon_stats,
+    label = "p.adj.signif",
+    tip.length = 0.01,
+    hide.ns = TRUE
+  )
+
+# Seed Mass Plot ----------------------------------------------------------
+mass_stats <- perform_pairwise(df, "MassperSeed_mg")
+
+p3 <- ggplot(df, aes(x = Treatment, y = MassperSeed_mg, fill = Cultivar)) +
+  geom_boxplot(alpha = 0.2, width = 0.7, outlier.shape = NA) +
+  geom_jitter(
+    aes(color = Cultivar),
+    width = jitter_width,
+    height = 0,
+    alpha = point_alpha,
+    size = 2
+  ) +
+  scale_fill_manual(values = cbbPalette) +
+  scale_color_manual(values = cbbPalette) +
+  labs(y = "Seed Mass (mg)", x = "") +
+  theme_classic() +
+  facet_wrap(~Cultivar) +
+  stat_pvalue_manual(
+    mass_stats,
+    label = "p.adj.signif",
+    tip.length = 0.01,
+    hide.ns = TRUE
+  )
+
+# Combine plots -----------------------------------------------------------
+final_plot <- ggarrange(
+  p1, p2, p3,
+  ncol = 3,
+  labels = c("A", "B", "C"),
+  common.legend = TRUE,
+  legend = "bottom"
+)
+
+# Display and save
+print(final_plot)
+# ggsave("mycotoxin_analysis.png", final_plot, width = 16, height = 6, dpi = 300)
+```
+
