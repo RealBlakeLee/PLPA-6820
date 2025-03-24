@@ -1,0 +1,54 @@
+---
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+```{r}
+# Load required packages
+library(tidyverse)  
+
+# Read the CSV files into data frames
+diversity_data <- read_csv("DiversityData.csv")    
+metadata <- read_csv("Metadata.csv")         
+
+# Join diversity data with metadata by the sample Code
+alpha <- inner_join(diversity_data, metadata, by = "Code")
+
+# Compute Pielou's evenness index for each sample and add as new column
+alpha_even <- alpha %>%
+  mutate(evenness = shannon / log(richness))
+
+# Group by Crop and Time_Point and calculate summary statistics
+alpha_average <- alpha_even %>%
+  group_by(Crop, Time_Point) %>%
+  summarise(
+    mean.even = mean(evenness, na.rm = TRUE),
+    n        = n(),
+    sd.even  = sd(evenness, na.rm = TRUE),
+    se.even  = sd.even / sqrt(n),
+    .groups  = "drop"        # drop grouping after summarise
+  )
+
+# Pivot the summary table to wide format by Crop, then calculate differences
+alpha_average2 <- alpha_average %>%
+  select(Time_Point, Crop, mean.even) %>%
+  pivot_wider(names_from = Crop, values_from = mean.even) %>%
+  mutate(
+    diff.cotton.even  = Soil - Cotton,
+    diff.soybean.even = Soil - Soybean
+  )
+
+# Prepare data for plotting: make differences long format
+plot_data <- alpha_average2 %>%
+  select(Time_Point, diff.cotton.even, diff.soybean.even) %>%
+  pivot_longer(cols = c(diff.cotton.even, diff.soybean.even),
+               names_to = "diff", values_to = "value")
+
+# Plot the differences over time with ggplot
+ggplot(plot_data, aes(x = Time_Point, y = value, color = diff, group = diff)) +
+  geom_line(size = 1) +
+  labs(x = "Time Point", y = "Evenness Difference (Soil - Crop)", color = "Difference")
+
+```
+
