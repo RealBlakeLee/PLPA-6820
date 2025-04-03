@@ -1,0 +1,87 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Load libraries
+library(tidyverse)
+library(lme4)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+
+install.packages("emmeans")
+install.packages("multcomp")
+install.packages("multcompView")
+install.packages("lme4")
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(lme4)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+
+# Read in data
+STAND <- read_csv("PlantEmergence.csv")
+
+# Convert to factors
+STAND$Treatment <- as.factor(STAND$Treatment)
+STAND$DaysAfterPlanting <- as.factor(STAND$DaysAfterPlanting)
+STAND$Rep <- as.factor(STAND$Rep)
+
+# Fit linear models
+lm1 <- lm(Emergence ~ Treatment * DaysAfterPlanting, data = STAND)
+print(summary(lm1))
+print(anova(lm1))
+
+lm2 <- lm(Emergence ~ Treatment + DaysAfterPlanting, data = STAND)
+print(summary(lm2))
+print(anova(lm2))
+
+# Least squares means
+lsm <- emmeans(lm2, ~ Treatment)
+lsm_cld <- cld(lsm, alpha = 0.05, Letters = letters)
+print(lsm_cld)
+
+# Plot function
+plot_cldbars_onefactor <- function(lm_model, factor) {
+  data <- lm_model$model
+  variables <- colnames(lm_model$model)
+  dependent_var <- variables[1]
+  independent_var <- variables[2:length(variables)]
+
+  lsmeans <- emmeans(lm_model, as.formula(paste("~", factor)))
+  Results_lsmeans <- cld(lsmeans, alpha = 0.05, reversed = TRUE, details = TRUE, Letters = letters)
+
+  sig.diff.letters <- data.frame(Results_lsmeans$emmeans[,1], 
+                                 stringr::str_trim(Results_lsmeans$emmeans[,7]))
+  colnames(sig.diff.letters) <- c(factor, "Letters")
+
+  ave_stand2 <- lm_model$model %>%
+    group_by(!!sym(factor)) %>%
+    dplyr::summarize(
+      ave.emerge = mean(.data[[dependent_var]], na.rm = TRUE),
+      se = sd(.data[[dependent_var]]) / sqrt(n())
+    ) %>%
+    left_join(sig.diff.letters, by = factor) %>%
+    mutate(letter_position = ave.emerge + 10 * se)
+
+  plot <- ggplot(data, aes(x = !! sym(factor), y = !! sym(dependent_var))) + 
+    stat_summary(fun = mean, geom = "bar") +
+    stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.5) +
+    ylab("Number of emerged plants") + 
+    geom_jitter(width = 0.02, alpha = 0.5) +
+    geom_text(data = ave_stand2, aes(label = Letters, y = letter_position), size = 5) +
+    xlab(as.character(factor)) +
+    theme_classic()
+
+  return(plot)
+}
+
+# Generate the plot
+plot_cldbars_onefactor(lm2, "Treatment")
+
+```
+
